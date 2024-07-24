@@ -11,6 +11,10 @@ TOKEN=$token
 REPO_OWNER=$1
 REPO_NAME=$2
 
+# Print the repository information for debugging
+echo "Repository Owner: $REPO_OWNER"
+echo "Repository Name: $REPO_NAME"
+
 # Function to make a GET request to the GitHub API
 function github_api_get {
     local endpoint="$1"
@@ -25,9 +29,20 @@ function list_users_with_read_access {
     local endpoint="repos/${REPO_OWNER}/${REPO_NAME}/collaborators"
 
     # Fetch the list of collaborators on the repository
-    collaborators="$(github_api_get "$endpoint" | jq -r '.[] | select(.permissions.pull == true) | .login')"
+    response=$(github_api_get "$endpoint")
 
-    # Display the list of collaborators with read access
+    # Print the raw response for debugging
+    echo "Raw API response: $response" >&2
+
+    # Check for API errors
+    if echo "$response" | jq -e 'has("message")' > /dev/null; then
+        error_message=$(echo "$response" | jq -r '.message')
+        echo "Error from GitHub API: $error_message" >&2
+        return
+    fi
+
+    # Filter and display the list of collaborators with read access
+    collaborators=$(echo "$response" | jq -r '.[] | select(.permissions.pull == true) | .login')
     if [[ -z "$collaborators" ]]; then
         echo "No users with read access found for ${REPO_OWNER}/${REPO_NAME}."
     else
@@ -37,6 +52,5 @@ function list_users_with_read_access {
 }
 
 # Main script
-
 echo "Listing users with read access to ${REPO_OWNER}/${REPO_NAME}..."
 list_users_with_read_access
