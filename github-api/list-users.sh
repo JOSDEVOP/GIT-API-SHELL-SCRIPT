@@ -41,6 +41,9 @@ function list_users_with_read_access {
         return
     fi
 
+    # Use a simplified `jq` command to see what keys are available
+    echo "$response" | jq -r '.[].permissions' >&2
+
     # Filter and display the list of collaborators with read access
     collaborators=$(echo "$response" | jq -r '.[] | select(.permissions.pull == true) | .login')
     if [[ -z "$collaborators" ]]; then
